@@ -7,7 +7,7 @@ const mailjet = require('node-mailjet').apiConnect(
 const router = express.Router();
 
 router.post('/', async (req, res) => {
-    const { to, type, first_name, middle_name, last_name, status, subject, text, html } = req.body;
+    const { to, type, first_name, middle_name, last_name, status, subject, text, html, email } = req.body;
 
     const request = mailjet.post('send', { version: 'v3.1' }).request({
         Messages: [
@@ -18,26 +18,13 @@ router.post('/', async (req, res) => {
                 },
                 To: [
                     {
-                        Email: to,
-                        Name: 'Adon',
+                        Email: email,
+                        Name: first_name + ", " + last_name,
                     },
                 ],
                 Subject: "Distribution of Subsidy",
-                // TextPart: `Type: ${type}`,
-//                 textPart: `Dear recipient,
 
-// We are pleased to inform you about the latest subsidy information. Please find the details below:
-
-// Type: Subsidy
-// Amount: $XXX
-// Effective Date: [Effective Date]
-
-// Thank you for your continued support.
-
-// Best regards,
-// [Your Organization]`,
-
-  htmlPart: `<p>Dear ${first_name},</p>
+                htmlPart: `<p>Dear ${first_name},</p>
 
 <p>We are pleased to inform you about the latest subsidy information. Please find the details below:</p>
 
@@ -49,7 +36,7 @@ To check additional information you may log in to <a href="http://localhost:3000
 <p>Thank you for your patience.</p>
 
 <p>Best regards,<br />
-Web-Based Farmer’s Cash and Crops Subsidies Management System</p>`
+Web-Based Farmer’s Cash and Crops Subsidies Management System Team.</p>`
             },
         ],
     });

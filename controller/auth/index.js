@@ -44,7 +44,7 @@ router
                         message: "The provided password is incorrect.",
                     });
 
-                if(rows[0].activate === 0) return res.status(401).json({
+                if(rows[0].status === 'inactive') return res.status(401).json({
                     status: 401,
                     error: "Invalid",
                     message : "Your account is not yet activated, please contact administrator."

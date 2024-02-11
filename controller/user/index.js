@@ -35,37 +35,74 @@ const findEmail = (req, res, next) => {
         });
     }
 }
+// const sql = "SELECT id, first_name, middle_name, last_name, suffix, email, gender, phone_number, birth_date, role, barangay, status FROM user WHERE id != ?";
+
 
 router
     .route("/")
     .get(JWT.verifyAccessToken, (req, res) => {
         const id = req.query.id;
+        const page = parseInt(req.query.page) || 1; // default page is 1
+        const limit = parseInt(req.query.limit) || 5; // default limit is 10
+        const q = req.query.q || null;
+
         try {
-            const sql = "SELECT id, first_name, middle_name, last_name, suffix, email, gender, phone_number, birth_date, role, barangay, status FROM user WHERE id != ?";
+            const offset = (page - 1) * limit;
+            let sql = ""
 
+            sql = "SELECT COUNT(*) as totalCount FROM user WHERE id != ?";
 
-            db.query(sql, id, (err, rows) => {
+            let params1 = [id];
+
+            if (q !== null) {
+                sql += " AND (first_name LIKE ? OR middle_name LIKE ? OR last_name LIKE ? OR SUFFIX LIKE ? OR barangay LIKE ? OR email LIKE ?)"
+                params1.push(`%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`)
+            }
+
+            let params2 = [id];
+
+            // Query total count
+            db.query(sql, params1, (err, countResult) => {
                 if (err) {
-                    console.log(`Server error controller/user/get: ${err}`);
+                    console.log(`Server error controller/farm/list/get: ${err}`);
                     return res.status(500).json({
                         status: 500,
                         message: `Internal Server Error, ${err}`,
                     });
                 }
 
-                if (rows.length === 0) return res.status(200).json({
-                    error: "200",
-                    message: "No Record found"
-                })
+                const totalCount = countResult[0].totalCount;
 
-                return res.status(200).json({
-                    status: 200,
-                    message: `Successfully retrieved ${rows.length} record/s`,
-                    data: rows,
+                // Query data with pagination
+                sql = "SELECT id, first_name, middle_name, last_name, suffix, email, gender, phone_number, birth_date, role, barangay, status FROM user WHERE id != ?";
+
+                if (q !== null) {
+                    sql += " AND (first_name LIKE ? OR middle_name LIKE ? OR last_name LIKE ? OR SUFFIX LIKE ? OR barangay LIKE ? OR email LIKE ?)"
+                    params2.push(`%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`)
+                }
+
+                sql += " ORDER BY created_at DESC LIMIT ? OFFSET ?"
+                params2.push(limit, offset);
+
+                db.query(sql, params2, (err, rows) => {
+                    if (err) {
+                        console.log(`Server error controller/farm/list/get data: ${err}`);
+                        return res.status(500).json({
+                            status: 500,
+                            message: `Internal Server Error, ${err}`,
+                        });
+                    }
+
+                    return res.status(200).json({
+                        status: 200,
+                        message: `Successfully retrieved ${rows.length} record/s`,
+                        data: rows,
+                        totalCount: totalCount // Include total count in the response
+                    });
                 });
             });
         } catch (error) {
-            console.log(`Server error controller/user/post: ${error}`);
+            console.log(`Server error controller/farm/list/get: ${error}`);
             res.status(500).json({
                 status: 500,
                 message: `Internal Server Error, ${error}`,
@@ -92,7 +129,6 @@ router
             suffix,
             barangay
         ];
-        console.log(birth_date)
 
         const sql = `INSERT INTO user (id, first_name, middle_name, last_name, email, gender, password, phone_number, role, birth_date, suffix, barangay) 
     values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
@@ -125,14 +161,14 @@ router
 router
     .route("/")
     .put(JWT.verifyAccessToken, async (req, res) => {
-        const { first_name, middle_name, last_name, phone_number, role, password, gender, suffix, birth_date, email, status } = req.body;
+        const { first_name, middle_name, last_name, phone_number, role, password, gender, suffix, birth_date, email, status, barangay } = req.body;
         const id = req.query.id;
         let hashedPassword = "";
         let credentials = [];
         try {
             let sql = "";
             if (!password || password === null) {
-                sql = `UPDATE user SET first_name = ?, middle_name = ?, last_name = ?, gender = ?, phone_number = ?, role = ?, suffix = ?
+                sql = `UPDATE user SET first_name = ?, middle_name = ?, last_name = ?, gender = ?, phone_number = ?, role = ?, suffix = ?, birth_date = ?, email = ?, status = ?, barangay = ?
                 WHERE id = ?`;
                 credentials = [
                     first_name,
@@ -142,6 +178,10 @@ router
                     phone_number,
                     role,
                     suffix,
+                    birth_date,
+                    email,
+                    status,
+                    barangay,
                     id,
                 ];
             } else {
@@ -217,7 +257,7 @@ router.put('/changepassword', async (req, res) => {
     let hashedPassword = "";
     try {
         const sql = `UPDATE user SET password = ? WHERE id = ?`;
-            
+
 
         hashedPassword = await bcrypt.hash(password, 13);
         db.query(sql, [hashedPassword, id], (err, rows) => {
@@ -237,6 +277,39 @@ router.put('/changepassword', async (req, res) => {
         });
     } catch (error) {
         console.log(`Server error controller/user/changepassword/put: ${error}`);
+        res.status(500).json({
+            status: 500,
+            message: `Internal Server Error, ${error}`,
+        });
+    }
+})
+
+router.get('/all', JWT.verifyAccessToken, (req, res) => {
+    try {
+        sql = "SELECT * FROM user WHERE role = ?";
+
+        db.query(sql, "user", (err, rows) => {
+            if (err) {
+                console.log(`Server error controller/user/all/get: ${err}`);
+                return res.status(500).json({
+                    status: 500,
+                    message: `Internal Server Error, ${err}`,
+                });
+            }
+
+            if (rows.length === 0) return res.status(401).json({
+                error: "401",
+                message: "No Record found"
+            })
+
+            return res.status(200).json({
+                status: 200,
+                message: `Successfully retrieved ${rows.length} record/s`,
+                data: rows,
+            });
+        });
+    } catch (error) {
+        console.log(`Server error controller/user/all/get: ${error}`);
         res.status(500).json({
             status: 500,
             message: `Internal Server Error, ${error}`,
@@ -277,7 +350,10 @@ router.get("/:id", JWT.verifyAccessToken, (req, res) => {
                 phone_number: rows[0].phone_number,
                 role: rows[0].role,
                 birth_date: rows[0].birth_date,
-                address: rows[0].address
+                province: rows[0].province,
+                city: rows[0].city,
+                barangay: rows[0].barangay,
+
             }
 
             return res.status(200).json({
