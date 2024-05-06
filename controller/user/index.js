@@ -9,7 +9,6 @@ const JWT = require("../../middleware/JWT");
 
 const findEmail = (req, res, next) => {
     const { email } = req.body;
-    console.log(email)
     try {
         let sql = "SELECt * FROM user WHERE email = ?";
         db.query(sql, email, (err, rows) => {
@@ -200,7 +199,7 @@ router
                     id,
                 ];
             }
-            console.log(credentials)
+            
             db.query(sql, credentials, (err, rows) => {
                 if (err) {
                     console.log(`Server error controller/user/put: ${err}`);
@@ -310,6 +309,76 @@ router.get('/all', JWT.verifyAccessToken, (req, res) => {
         });
     } catch (error) {
         console.log(`Server error controller/user/all/get: ${error}`);
+        res.status(500).json({
+            status: 500,
+            message: `Internal Server Error, ${error}`,
+        });
+    }
+})
+
+router.get("/admins", JWT.verifyAccessToken, (req, res) => {
+    const id = req.query.id;
+    const page = parseInt(req.query.page) || 1; // default page is 1
+    const limit = parseInt(req.query.limit) || 5; // default limit is 10
+    const q = req.query.q || null;
+
+    try {
+        const offset = (page - 1) * limit;
+        let sql = ""
+
+        sql = "SELECT COUNT(*) as totalCount FROM user WHERE id != ? AND role != 'user'";
+
+        let params1 = [id];
+
+        if (q !== null) {
+            sql += " AND (first_name LIKE ? OR middle_name LIKE ? OR last_name LIKE ? OR SUFFIX LIKE ? OR barangay LIKE ? OR email LIKE ?)"
+            params1.push(`%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`)
+        }
+
+        let params2 = [id];
+
+        // Query total count
+        db.query(sql, params1, (err, countResult) => {
+            if (err) {
+                console.log(`Server error controller/farm/list/get: ${err}`);
+                return res.status(500).json({
+                    status: 500,
+                    message: `Internal Server Error, ${err}`,
+                });
+            }
+
+            const totalCount = countResult[0].totalCount;
+
+            // Query data with pagination
+            sql = "SELECT id, first_name, middle_name, last_name, suffix, email, gender, phone_number, birth_date, role, barangay, status FROM user WHERE id != ? AND role != 'user'";
+
+            if (q !== null) {
+                sql += " AND (first_name LIKE ? OR middle_name LIKE ? OR last_name LIKE ? OR SUFFIX LIKE ? OR barangay LIKE ? OR email LIKE ?)"
+                params2.push(`%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`)
+            }
+
+            sql += " ORDER BY created_at DESC LIMIT ? OFFSET ?"
+            params2.push(limit, offset);
+
+            db.query(sql, params2, (err, rows) => {
+                if (err) {
+                    console.log(`Server error controller/farm/list/get data: ${err}`);
+                    return res.status(500).json({
+                        status: 500,
+                        message: `Internal Server Error, ${err}`,
+                    });
+                }
+
+                return res.status(200).json({
+                    status: 200,
+                    message: `Successfully retrieved ${rows.length} record/s`,
+                    data: rows,
+                    totalCount: totalCount // Include total count in the response
+                });
+            });
+        });
+    } catch (error) {
+        console.log(`Server error controller/farm/list/get: ${error}`);
         res.status(500).json({
             status: 500,
             message: `Internal Server Error, ${error}`,

@@ -338,6 +338,60 @@ router.get("/totalbags", (req, res) => {
     }
 })
 
+router.get("/cash", (req, res) => {
+    try {
+        const sql = `SELECT * FROM subsidy WHERE type = 'CASH' AND status = 'COMPLETED'`;
+        db.query(sql, (err, rows) => {
+            if (err) {
+                console.log(`Server error controller/subsidy/cash/get: ${err}`);
+                return res.status(500).json({
+                    status: 500,
+                    message: `Internal Server Error, ${err}`,
+                });
+            }
+
+            return res.status(200).json({
+                status: 200,
+                message: "Successfully retrieved",
+                data: rows,
+            });
+        });
+    } catch (error) {
+        console.log(`Server error controller/cash/get: ${error}`);
+        res.status(500).json({
+            status: 500,
+            message: `Internal Server Error, ${error}`,
+        });
+    }
+})
+
+router.get("/rice", (req, res) => {
+    try {
+        const sql = `SELECT * FROM subsidy WHERE type = 'RCEF RICE SEED DISTIBUTION' AND status = 'COMPLETED'`;
+        db.query(sql, (err, rows) => {
+            if (err) {
+                console.log(`Server error controller/subsidy/cash/get: ${err}`);
+                return res.status(500).json({
+                    status: 500,
+                    message: `Internal Server Error, ${err}`,
+                });
+            }
+
+            return res.status(200).json({
+                status: 200,
+                message: "Successfully retrieved",
+                data: rows,
+            });
+        });
+    } catch (error) {
+        console.log(`Server error controller/cash/get: ${error}`);
+        res.status(500).json({
+            status: 500,
+            message: `Internal Server Error, ${error}`,
+        });
+    }
+})
+
 router.get("/:id", JWT.verifyAccessToken, (req, res) => {
     const id = req.params.id;
     const type = req.query.type;
