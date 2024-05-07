@@ -287,7 +287,7 @@ router.get('/all', JWT.verifyAccessToken, (req, res) => {
     try {
         sql = "SELECT * FROM user WHERE role = ?";
 
-        db.query(sql, "user", (err, rows) => {
+        db.query(sql, "member", (err, rows) => {
             if (err) {
                 console.log(`Server error controller/user/all/get: ${err}`);
                 return res.status(500).json({
