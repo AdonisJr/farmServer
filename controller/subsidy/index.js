@@ -5,6 +5,7 @@ const db = require("../../utils/database");
 const bcrypt = require("bcrypt");
 const JWT = require("../../middleware/JWT");
 const nodemailer = require('nodemailer');
+const RFFA = require('../../middleware/RFFA');
 
 router
     .route("/")
@@ -13,8 +14,10 @@ router
         const limit = parseInt(req.query.limit) || 5; // default limit is 10
         const isCompleted = req.query.isCompleted;
         const q = req.query.q || null;
+        const barangay = req.query.barangay || null;
         const type = req.query.type;
-        console.log('eww')
+        const month = req.query.month || "";
+        const year = req.query.year || "";
 
         try {
             const offset = (page - 1) * limit;
@@ -37,8 +40,22 @@ router
 
 
             if (q !== null) {
-                sql += " AND (first_name LIKE ? OR middle_name LIKE ? OR last_name LIKE ? OR SUFFIX LIKE ? OR barangay LIKE ?)"
-                params1.push(`%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`)
+                sql += " AND (first_name LIKE ? OR middle_name LIKE ? OR last_name LIKE ? OR SUFFIX LIKE ?)"
+                params1.push(`%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`)
+            }
+
+            if (barangay !== null) {
+                sql += " AND barangay LIKE ?"
+                params1.push(`%${barangay}%`)
+            }
+
+            if (month !== '') {
+                sql += " AND MONTH(subsidy.created_at) = ?"
+                params1.push(month)
+            } 
+            if (year !== '') {
+                sql += " AND YEAR(subsidy.created_at) = ?"
+                params1.push(year)
             }
 
             let params2 = [];
@@ -56,7 +73,10 @@ router
                 const totalCount = countResult[0].totalCount;
 
                 // Query data with pagination
-                sql = "SELECT user.first_name, user.middle_name, user.last_name, user.suffix, user.barangay, user.email, farm_data.lot_size, farm_data.lat, farm_data.lng, subsidy.* FROM subsidy INNER JOIN user ON user.id = subsidy.user_id INNER JOIN farm_data on farm_data.id = subsidy.farm_id";
+                sql = `SELECT 
+                user.first_name, user.middle_name, user.last_name, user.suffix, user.barangay, user.email, 
+                farm_data.lot_size, farm_data.lat, farm_data.lng, farm_data.type AS crops,
+                subsidy.* FROM subsidy INNER JOIN user ON user.id = subsidy.user_id INNER JOIN farm_data on farm_data.id = subsidy.farm_id`;
 
                 if (isCompleted === 'true') {
                     sql += " WHERE subsidy.status = ?";
@@ -70,8 +90,22 @@ router
                 params2.push(type)
 
                 if (q !== null) {
-                    sql += " AND (first_name LIKE ? OR middle_name LIKE ? OR last_name LIKE ? OR SUFFIX LIKE ? OR barangay LIKE ?)"
-                    params2.push(`%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`)
+                    sql += " AND (first_name LIKE ? OR middle_name LIKE ? OR last_name LIKE ? OR SUFFIX LIKE ?)"
+                    params2.push(`%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`)
+                }
+
+                if (barangay !== null) {
+                    sql += " AND barangay LIKE ?"
+                    params2.push(`%${barangay}%`)
+                }
+
+                if (month !== '') {
+                    sql += " AND MONTH(subsidy.created_at) = ?"
+                    params2.push(month)
+                } 
+                if (year !== '') {
+                    sql += " AND YEAR(subsidy.created_at) = ?"
+                    params2.push(year)
                 }
 
                 sql += " ORDER BY created_at DESC LIMIT ? OFFSET ?"
@@ -102,9 +136,10 @@ router
             });
         }
     })
-    .post(JWT.verifyAccessToken, async (req, res) => {
+    .post(JWT.verifyAccessToken, RFFA.isValidated, async (req, res) => {
         const { email, user_id, farm_id, type, amount, area_planted, number_bags, variety_received, quantity_received, month, year, status, remarks } =
             req.body;
+
 
         const sql = `INSERT INTO subsidy (farm_id, user_id, type, amount, area_planted, number_bags, variety_received, quantity_received, month, year, status, remarks) 
     values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
