@@ -5,46 +5,24 @@ const db = require("../../utils/database");
 const bcrypt = require("bcrypt");
 const JWT = require("../../middleware/JWT");
 
-// GET ALL AND INSERT OFFICER
-
-// const findEmail = (req, res, next) => {
-//     const {email} = req.body;
-//     console.log(email)
-//     try {
-//         let sql = "SELECt * FROM user WHERE email = ?";
-//         db.query(sql, email, (err, rows) => {
-//             if (err) {
-//                 console.log(`Server error controller/findEmail: ${err}`);
-//                 return res.status(500).json({
-//                     status: 500,
-//                     message: `Internal Server Error, ${err}`,
-//                 });
-//             }
-//             if (rows.length !== 0) return res.status(401).json({
-//                 status: 401,
-//                 message: `Email already exist.`,
-//                 error: `Duplicate.`
-//             });
-//             next();
-//         })
-//     } catch (error) {
-//         console.log(`Server error controller/findEmail/ ${error}`);
-//         res.status(500).json({
-//             status: 500,
-//             message: `Internal Server Error, ${error}`,
-//         });
-//     }
-// }
-
 router
     .route("/")
     .get(JWT.verifyAccessToken, (req, res) => {
+        const user_id = req.query.user_id || null;
         try {
-            const sql = "SELECT user.first_name, user.middle_name, user.last_name, user.suffix, user.barangay, farm_data.* FROM farm_data INNER JOIN user ON farm_data.user_id = user.id";
+            let sql = ""
+            const params = [];
+            sql = `SELECT user.first_name, user.middle_name, user.last_name, user.birth_date, user.city, user.barangay,  
+                validation.* FROM validation where user.status = 'APPROVED'`;
 
-            db.query(sql, (err, rows) => {
+            if(user_id){
+                sql+= " AND user_id = ?"
+                params.push(user_id)
+            }
+
+            db.query(sql, params, (err, rows) => {
                 if (err) {
-                    console.log(`Server error controller/farm/get: ${err}`);
+                    console.log(`Server error controller/validation/get: ${err}`);
                     return res.status(500).json({
                         status: 500,
                         message: `Internal Server Error, ${err}`,
@@ -58,7 +36,7 @@ router
                 });
             });
         } catch (error) {
-            console.log(`Server error controller/farm/get: ${error}`);
+            console.log(`Server error controller/validation/get: ${error}`);
             res.status(500).json({
                 status: 500,
                 message: `Internal Server Error, ${error}`,
@@ -66,19 +44,19 @@ router
         }
     })
     .post(JWT.verifyAccessToken, async (req, res) => {
-        const { user_id, lat, lng, polygon, establish_date, lot_size, status, type } =
+        const { user_id, place_birth, nationality, profession, source_income, mother_name, no_parcel, status } =
             req.body;
         const id = crypto.randomUUID().split("-")[4];
         let coordinatesJson = JSON.stringify(polygon);
 
-        const params = [id, user_id, coordinatesJson, lot_size, establish_date, status, type]
+        const params = [id, user_id, place_birth, nationality, profession, source_income, mother_name, no_parcel, status]
 
-        const sql = `INSERT INTO farm_data (id, user_id, polygon, lot_size, establish_date, status, type) 
-    values (?, ?, JSON_ARRAY(?), ?, ?, ?, ?)`;
+        const sql = `INSERT INTO validation (id, user_id, place_birth, profession, source_income, mother_name, no_parcel, status) 
+    values (?, ?, ?, ?, ?, ?, ?, ?)`;
         try {
             db.query(sql, params, (err, rows) => {
                 if (err) {
-                    console.log(`Server error controller/farm/post: ${err}`);
+                    console.log(`Server error controller/validation/post: ${err}`);
                     return res.status(500).json({
                         status: 500,
                         message: `Internal Server Error, ${err}`,
@@ -91,7 +69,7 @@ router
                 });
             });
         } catch (error) {
-            console.log(`Server error controller/farm/post: ${error}`);
+            console.log(`Server error controller/validation/post: ${error}`);
             res.status(500).json({
                 status: 500,
                 message: `Internal Server Error, ${error}`,
@@ -104,23 +82,25 @@ router
 router
     .route("/")
     .put(JWT.verifyAccessToken, async (req, res) => {
-        const { user_id, lat, lng, lot_size, establish_date, status, remarks, id } = req.body;
+        const { user_id, place_birth, nationality, profession, source_income, mother_name, no_parcel, status } =
+            req.body;
+        const id = req.query.id || null;
 
         try {
-            const sql = `UPDATE farm_data SET user_id = ?, lat = ?, lng = ?, lot_size = ?, establish_date = ?, status = ?, remarks = ? WHERE id = ?`;
+            const sql = `UPDATE validation SET place_birth = ?, nationality = ?, source_income = ?, mother_name = ?, no_parcel = ?, status = ?
+            WHERE id = ?`;
             const params = [
                 user_id,
-                lat,
-                lng,
-                lot_size,
-                establish_date,
+                place_birth,
+                source_income,
+                mother_name,
+                no_parcel,
                 status,
-                remarks,
                 id
             ];
             db.query(sql, params, (err, rows) => {
                 if (err) {
-                    console.log(`Server error controller/farm/put: ${err}`);
+                    console.log(`Server error controller/validation/put: ${err}`);
                     return res.status(500).json({
                         status: 500,
                         message: `Internal Server Error, ${err}`,
@@ -134,7 +114,7 @@ router
                 });
             });
         } catch (error) {
-            console.log(`Server error controller/farm/put: ${error}`);
+            console.log(`Server error controller/validation/put: ${error}`);
             res.status(500).json({
                 status: 500,
                 message: `Internal Server Error, ${error}`,
@@ -144,10 +124,10 @@ router
     .delete(JWT.verifyAccessToken, (req, res) => {
         const id = req.query.id;
         try {
-            const sql = 'DELETE FROM user WHERE id = ?';
+            const sql = 'DELETE FROM validation WHERE id = ?';
             db.query(sql, id, (err, rows) => {
                 if (err) {
-                    console.log(`Server error controller/user/delete: ${err}`);
+                    console.log(`Server error controller/validation/delete: ${err}`);
                     return res.status(500).json({
                         status: 500,
                         message: `Internal Server Error, ${err}`,
@@ -160,7 +140,7 @@ router
                 })
             })
         } catch (error) {
-            console.log(`Server error controller/user/delete: ${error}`);
+            console.log(`Server error controller/validation/delete: ${error}`);
             res.status(500).json({
                 status: 500,
                 message: `Internal Server Error, ${error}`,
@@ -301,19 +281,8 @@ router.get("/:id", JWT.verifyAccessToken, (req, res) => {
     const id = req.params.id;
     const status = req.query.status || null;
     try {
-        sql = "SELECT user.first_name, user.middle_name, user.last_name, farm_data.* FROM farm_data INNER JOIN user ON user.id = farm_data.user_id WHERE farm_data.user_id = ?";
-        const params = [id];
-
-        if (status !== null) {
-            if (status === "APPROVED") {
-                sql += " AND farm_data.status = ?";
-                params.push(status)
-            } else {
-                sql += " AND farm_data.status <> ?";
-                params.push("APPROVED")
-            }
-
-        }
+        const sql = `SELECT user.first_name, user.middle_name, user.last_name, user.birth_date, user.city, user.barangay,  
+            validation.* FROM validation where user.status = 'APPROVED'`;
 
         db.query(sql, params, (err, rows) => {
             if (err) {

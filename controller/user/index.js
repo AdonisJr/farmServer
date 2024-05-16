@@ -44,7 +44,7 @@ router
         const page = parseInt(req.query.page) || 1; // default page is 1
         const limit = parseInt(req.query.limit) || 5; // default limit is 10
         const q = req.query.q || null;
-
+        
         try {
             const offset = (page - 1) * limit;
             let sql = ""

@@ -14,6 +14,7 @@ router
         const isCompleted = req.query.isCompleted;
         const q = req.query.q || null;
         const type = req.query.type;
+        console.log('eww')
 
         try {
             const offset = (page - 1) * limit;
@@ -31,7 +32,7 @@ router
                 params1.push("COMPLETED")
             }
 
-            sql += " AND type = ?";
+            sql += " AND subsidy.type = ?";
             params1.push(type)
 
 
@@ -45,7 +46,7 @@ router
             // Query total count
             db.query(sql, params1, (err, countResult) => {
                 if (err) {
-                    console.log(`Server error controller/farm/list/get: ${err}`);
+                    console.log(`Server error controller/subsidy/get: ${err}`);
                     return res.status(500).json({
                         status: 500,
                         message: `Internal Server Error, ${err}`,
@@ -65,7 +66,7 @@ router
                     params2.push("COMPLETED")
                 }
 
-                sql += " AND type = ?";
+                sql += " AND subsidy.type = ?";
                 params2.push(type)
 
                 if (q !== null) {
@@ -78,7 +79,7 @@ router
 
                 db.query(sql, params2, (err, rows) => {
                     if (err) {
-                        console.log(`Server error controller/farm/list/get data: ${err}`);
+                        console.log(`Server error controller/subsidy/get data: ${err}`);
                         return res.status(500).json({
                             status: 500,
                             message: `Internal Server Error, ${err}`,
