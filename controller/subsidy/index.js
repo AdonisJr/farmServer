@@ -52,7 +52,7 @@ router
             if (month !== '') {
                 sql += " AND MONTH(subsidy.created_at) = ?"
                 params1.push(month)
-            } 
+            }
             if (year !== '') {
                 sql += " AND YEAR(subsidy.created_at) = ?"
                 params1.push(year)
@@ -102,7 +102,7 @@ router
                 if (month !== '') {
                     sql += " AND MONTH(subsidy.created_at) = ?"
                     params2.push(month)
-                } 
+                }
                 if (year !== '') {
                     sql += " AND YEAR(subsidy.created_at) = ?"
                     params2.push(year)
@@ -139,14 +139,22 @@ router
     .post(JWT.verifyAccessToken, RFFA.isValidated, async (req, res) => {
         const { email, user_id, farm_id, type, amount, area_planted, number_bags, variety_received, quantity_received, month, year, status, remarks } =
             req.body;
+        const created_at = req.body.created_at || null;
 
+        let sql = "";
 
-        const sql = `INSERT INTO subsidy (farm_id, user_id, type, amount, area_planted, number_bags, variety_received, quantity_received, month, year, status, remarks) 
-    values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
         const credentials = [farm_id, user_id, type, amount, area_planted, number_bags, variety_received, quantity_received, month, year, "PENDING", remarks]
         // Create a transporter with your email provider's SMTP settings
-
+        if (created_at) {
+            sql = `INSERT INTO subsidy (farm_id, user_id, type, amount, area_planted, number_bags, variety_received, quantity_received, month, year, status, remarks, created_at) 
+                values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+            credentials.push(created_at)
+        } else {
+            sql = `INSERT INTO subsidy (farm_id, user_id, type, amount, area_planted, number_bags, variety_received, quantity_received, month, year, status, remarks) 
+                values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+        }
         try {
+
             db.query(sql, credentials, (err, rows) => {
                 if (err) {
                     console.log(`Server error controller/subsidy/post: ${err}`);
